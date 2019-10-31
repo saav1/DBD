@@ -54,3 +54,77 @@ create table susttodos(
 );
 
 /*...........................................................................................*/
+/*Ej 2 - Añade dos columnas a la tabla HABITACION, superficie(number(4,2)) y piso(number(2))*/
+alter table habitacion add (
+    superficie number(4,2),
+    piso number(2)
+);
+
+/*Ej 3 - La superficie de la HABITACION número 1 es 17, la de la número 2 es 14 y la número 3 es 18*/
+update habitacion set superficie = 17 where numero = 1;
+update habitacion set superficie = 14 where numero = 2;
+update habitacion set superficei = 18 where numero = 3;
+
+/*Ej 4 - Crea la tabla MALCATEGORIA */
+create table malcategoria(
+    num number(3) primary key,
+    diff number(4,2)
+);
+
+/*RECUERDA HABER EJECUTADO SET SERVEROUTPUT ON*/
+
+/*Crea un bloque de código en el que, apoyándote en un cursor, se revise la superficie de las habitaciones
+y se controle que no sea inferior a la superficie mínima de su categoría. Se mostrará un listado en el que 
+se muestre el número de la habitación y se indique si su dimensión es correctas o no. Además, las habitaciones
+cuya superficie sea inferior a la mínima de su categoría se incluirán en una tabla MALCATEGORIA, se incluirá
+su número y su diferencia con respecto a la superficie mínima. */
+
+declare cursor c1 is 
+    select numero, superficie, supmin from habitacion, categoria where categoria=nombre;
+begin
+    for regc1 in c1 loop
+        if regc1.superficie < regc1.supmin then
+            dbms_output.put_line('Habitacion ' || regc1.numero || ' dimensión INCORRECTA ***');
+            insert into malcategoria values(regc1.numero, regc1.supmin - regc1.superficie);
+        else
+            dbms_output.put_line('Habitación ' || regc1.numero || ' dimensión CORRECTA');
+        end if;
+    end loop;
+end;
+
+
+/*Ej 5 
+    a - Ejecuta el fichero 'insert.txt' que encontrarás en uacloud y así insertarás algunas filas en las
+    tablas que has creado
+    b - Apoyandote en un cursor, se debe obtener un listado en el que figuren para las actividades de 
+    adulto que pueden ser sustitutas de más de 2 actividades de adulto que pueden coincidir en la misma
+    fecha:
+        Código de la actividad sustituta, descripción y la frase 'conflicto X sustituciones en la fecha Y'
+        donde en X aparecerá el número de actividades que coinciden en fecha y en Y la fecha en cuestión.
+        
+        Nota: En la tabla sustAdultos activ1 representa la actividad que es sustituida y activ2 la actividad
+        que la sustituye (sustituta). Se puede suponer que una actividad no figura como sustituta de ella misma
+        (lo controlaremos más adelante).
+        
+            . Si la actividad A10 es para adultos y sustituye a A11, A12 y A13 pero éstas no coinciden 
+            nunca en fecha, A10 no aparecerá en el listado.
+            . Si la actividad A20 es para adultos y sustituye a A11, A12, A13 y A14 y de estas, 3 coinciden
+            el 21/09/2012 y sólo 2 el 22/09/2012, A20 aparecerá en el listado indicando que tiene 2 sustituciones
+            en la fecha 21/09/2012.
+            . Si la actividad A30 es para adultos y sustituye A11, A12, A13 y A14 y de estas, 3 coinciden 
+            el 21/09/2012, y 4 el 22/09/2012, A30 aprecerá 2 veces en el listado indicando que tiene 3 sustituciones
+            en la fecha 21/09/2012 y 4 sustituciones en la fecha 22/09/2012
+            */
+ 
+ declare cursor c1 is
+    select activ2, descripcion, count(activ1) numsust, fecha from actividad, sustadultos, horario
+    where codigo=activ2 and activ1=actividad
+    group by activ2, descripcion, fecha
+    having count(*) > 2;
+    
+begin
+    for regc1 in c1 loop
+    dbms_output.put_line(regc1.activ2 || ' , ' || regc1.descripcion || ' conflicto ' || regc1.numsust || ' sustituciones en la fecha ' || regc1.fecha);
+    end loop;
+end;
+
