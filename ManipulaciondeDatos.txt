@@ -1,0 +1,69 @@
+/*Ej 1. Crea las siguientes tablas.*/
+create table temporada(
+    nombre varchar2(5) constraint pk_temporada primary key
+);
+
+create table categoria(
+    nombre varchar2(2) constraint pk_categoria primary key,
+    descripcion varchar2(80),
+    supmin number(4,2),
+    supmax number(4,2),
+    constraint ck_categoria_nombre check(nombre in ('D', 'DT', 'I', 'S'))
+);
+
+create table pvptemporada(
+    categoria varchar2(2) constraint fk_pvptemporada_categoria references categoria,
+    temporada varchar2(5) constraint fk_pvptemporada_temporada references temporada,
+    psa number(3),
+    pad number(3),
+    pmp number(3),
+    ppc number(3),
+    constraint pk_pvptemporada primary key(categoria, temporada)
+);
+
+create table habitacion(
+    numero number(3) constraint pk_habitacion primary key,
+    categoria varchar2(5) not null constraint fk_habitacion_categoria references categoria 
+);
+
+
+/*Ej. 2 - Una vez creadas las tablas, realiza los siguintes cambios*/
+/*Ej 2 - Realiza los cambios siguientes*/
+/*.La columna descripcion debe tener obligatoriamente valor.*/
+alter table categoria modify descripcion not null;
+/*.La temporada solo admite los valores BAJA, MEDIA o ALTA*/
+alter table temporada add constraint ck_temporada check(nombre in('BAJA', 'MEDIA', 'ALTA'));
+/*.La categoria de la habitación es por defecto D.*/
+alter table habitacion modify categoria default 'D';
+/*.El precio de solo alojamiento en cualquier temporada es por defecto 60*/
+alter table pvptemporada modify psa default 60;
+
+/*Ej 4 - Inserta los siguientes datos. Si alguna inserción no se puede realizar debes entender
+el motivo*/
+insert into categoria(nombre, descripcion, supmin) values('D', 'Secador..', 15);
+insert into categoria(nombre, descripcion, supmin) values('DT','Secador..', 15);
+insert into categoria(nombre, descripcion, supmax) values('I', 'Una cama..', 12);
+
+insert into temporada values('BAJA');
+insert into temporada values('MEDIA');
+insert into temporada values('ALTA');
+
+/*No se puede insertar una temporada con nombre = "EXTRA", por que soloa admite los 
+tres valores 'BAJA', 'MEDIA' y 'ALTA' la restricción.*/
+insert into habitacion values (1, 'D');
+insert into habitacion values (2, 'D');
+insert into habitacion values (3, 'D');
+/*No se puede insertar un número de habitación 3, por que ya existe.*/
+insert into habitacion values(5, 'DT');
+insert into habitacion values(6, 'DT');
+
+
+
+
+
+
+
+
+
+
+
