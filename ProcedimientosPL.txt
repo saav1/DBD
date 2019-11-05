@@ -1,0 +1,71 @@
+/*EJERCICIOS*/
+
+/*2. Crea un procedimiento para el ejercicio 4 de la sesión anterior. El enunciado de ese ejercicio se muestra 
+a continuación.
+
+Crea un bloque de código, apoyandote en un cursor, se revise la superficie de las habitaciones
+y se controle que no sea inferior a la superficie mínima de su categoria. 
+
+Se mostrará un listado en el que se muestre el número de la habitación y se indique si su 
+dimensión es correcta o no.
+
+Además, las habitaciones cuya superficie sea inferior a la mínima de su categoria se incluirán
+en una tabla MALCATEGORIA, se incluirá su número y su diferencia con respecto a la superficie 
+mínima. 
+
+*/
+create or replace procedure vermin is
+cursor c1 is select numero, superficie, supmin from habitacion, categoria where habitacion.categoria=categoria.nombre;
+begin
+    dbms_output.enable;
+    for regc1 in c1 loop
+        
+        if regc1.superficie < regc1.supmin then
+            dbms_output.put_line('Error habitacion : ' || regc1.numero || ' *superficie INCORRECTA***');
+            insert into malcategoria values(regc1.numero, regc1.superficie-regc1.supmin);
+        else
+            dbms_output.put_line('Habitación: '|| regc1.numero || ' superficie OK');
+        end if;
+        
+        
+    end loop;
+
+end;
+
+exec vermin;
+
+/*3. Crea un procedimiento en el que dada una fecha, se obtenga un listado en el que se muestre la hora, 
+código de actividad y descripción de las actividades que están previstas para esa fecha.*/
+
+create or replace procedure listaActividad (auxfecha date) is
+
+cursor c1 is 
+    select a.codigo, a.descripcion from actividad a, horario h 
+    where h.actividad = a.codigo and h.fecha = auxfecha;
+    
+begin
+    
+    for regc1 in c1 loop
+        dbms_output.put_line('Actividad : ' || regc1.codigo || '  descripción: ' || regc1.descripcion);
+    end loop;
+end;
+
+
+exec listaActividad('15/08/13');
+
+/*4. Crea un procedimiento en el que dada como entrada una actividad de adulto muestre el código y descripción
+de sus actividades equivalentes*/
+
+create or replace procedure equivalenteAdulto (auxActividad actadultos.actividad%type) is
+cursor c1 is 
+    select actividad, activ1, activ2 from actadultos, sustadultos 
+    where actividad = activ1 and actividad = auxActividad;
+begin
+
+    for regc1 in c1 loop
+        dbms_output.put_line('Equivalentes a '||regc1.actividad||' son: '|| regc1.activ2);
+    end loop;
+
+end;
+
+exec equivalenteAdulto('SEND');
