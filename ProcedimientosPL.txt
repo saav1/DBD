@@ -69,3 +69,43 @@ begin
 end;
 
 exec equivalenteAdulto('SEND');
+
+/*5. Crea una nueva tabal que llamada ADAPTADAS, en esta tabla estamos representando un subtipo de habitación.
+Tiene una única columna que es número de habitación*/
+create table adaptadas(
+    numHabitacion number(3,0) constraint pk_adaptadas primary key
+);
+
+
+
+/*6. Crea un procedimiento que se llama COMPLETAADAPTADAS. 
+Insertar en la tabla ADAPTADAS todas las habitaciones que estén en el piso 0 y que tengan más de 25m2
+de superficie. 
+
+Además se mostrará al finalizar la inserción el siguiente mensaje "Se han dado de lata X habitaciones como 
+adaptadas" donde en X figurará el número total de habitaciones que se han insertado en ADAPTADAS.
+*/
+
+create or replace procedure completaAdaptadas is
+
+cont number:=0;
+
+cursor c1 is
+    select numero from habitacion where piso = 0 and superficie < 25;
+begin
+    
+    for regc1 in c1 loop
+         insert into adaptadas values(regc1.numero);
+         cont:=cont+1;
+    end loop;
+    dbms_output.put_line('Se han dado de alta '|| cont ||' como adaptadas.');
+end;
+
+exec completaAdaptadas;
+
+
+
+
+
+
+
