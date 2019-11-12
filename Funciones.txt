@@ -1,0 +1,59 @@
+/*FUNCIONES EJERCICIOS*/
+
+/*1. Crea una función en la que dado un número de habitación y una fecha nos devuelva el precio de esa 
+habitación en esa fecha en régimen de sólo alojamiento.*/
+
+create or replace function preciohabitacion(auxNum habitacion.numero%type, auxFecha calendreservas.fecha%type) return number 
+is
+auxPrecio number := 0;
+
+    cursor c1 is 
+        select c.habitacion hab, c.fecha fecha, p.psa precio from pvptemporada p, calendreservas c, habitacion h
+        where c.habitacion = h.numero and h.categoria = p.categoria;
+begin
+    dbms_output.enable();
+    for regc1 in c1 loop
+        if regc1.hab = auxNum and regc1.fecha = auxFecha then
+            auxPrecio := regc1.precio;
+        end if;
+    end loop;
+    
+    return auxPrecio;
+end;
+
+
+SELECT preciohabitacion(8, '01/11/12') FROM dual; 
+
+
+
+/*2. Crea una función en la que dada una categoría de habitación, una fecha y un régimen alimenticio(SA, AD, MP, PC)
+nos devuelva el precio que corresponda.*/
+
+set serveroutput on;
+
+create or replace function precioHabitacion2(auxCat habitacion.categoria%type, auxFecha calendreservas.fecha%type, auxAliment calendreservas.alimentacion%type) 
+return number 
+is
+auxPrecio number := 0;
+
+    cursor c1 is 
+        select psa, pad, pmp, ppc from pvptemporada p, habitacion h, calendreservas c
+        where p.categoria = h.categoria and h.categoria = auxCat and h.numero = c.habitacion and c.fecha = auxFecha;
+begin
+    for regc1 in c1 loop
+        if auxAliment = 'SA' then 
+            auxPrecio := regc1.psa;
+        elsif auxAliment = 'AD' then
+            auxPrecio := regc1.pad;
+        elsif auxAliment = 'MP' then
+            auxPrecio := regc1.pmp;
+        elsif auxAliment = 'PC' then
+            auxPrecio := regc1.ppc;
+        end if;
+    end loop;
+    return auxPrecio;
+end;
+        
+select preciohabitacion2('S', '01/11/12', 'SA') from dual;
+
+        
