@@ -56,4 +56,29 @@ end;
         
 select preciohabitacion2('S', '01/11/12', 'SA') from dual;
 
+
+/*3. Crea una función que dado un NIF de empleado de servicios y una fecha nos indique cuantas citas tiene previstas 
+para ese día.*/
+
+create or replace function citasEmpleado(auxNif empleado.nif%type, auxFecha cita.fecha%type) return number 
+is 
+auxCont number := 0;
+    cursor c1 is 
+        select empleado, fecha from cita;
+begin
+    for regc1 in c1 loop
+        if regc1.empleado = auxNif and regc1.fecha = auxFecha then
+            auxCont := auxCont + 1;
+        end if;
+    end loop;
+    
+    return auxCont;
+end;
+
+select citasempleado('77777777S', '15/11/12') from dual;
+
+
         
+
+
+
