@@ -77,8 +77,62 @@ end;
 
 select citasempleado('77777777S', '15/11/12') from dual;
 
+/*4. Crean una función llamada libre en la que dado un empleado, una fecha y un momento devuelva SI si el empleado no tiene 
+citas para esa fecha y momento, y NO si no es así.*/
+
+create or replace function libre (auxEmpleado empleado.nif%type, auxFecha cita.fecha%type, auxMomento cita.momento%type) return varchar
+is
+    auxOK varchar(2) := 'SI';
+    cursor c1 is 
+        select fecha, momento, empleado from cita;
+begin
+    for regc1 in c1 loop
+        if regc1.fecha = auxFecha and regc1.momento = auxMomento and regc1.empleado = auxEmpleado then
+            auxOk := 'NO';
+        end if;
+    end loop;
+    
+    return auxOK;
+end;
+
+select libre('77777777S', '15/11/12', 1) from dual; /*No está libre*/
+
+/*5. Crea una función llamada gastodiario, en la que dado un número de habitación y una fecha, devuelva la cantidad total gastada
+en servicios por esa habitación en esa fecha.*/
+
+create or replace function gastodiario(auxHab habitacion.numero%type, auxFecha consumir.fecha%type) return number
+is 
+    auxCantidad number := 0;
+    cursor c1 is 
+        select c.habitación habitacion, c.fecha fecha, (c.cantidad * s.precio) total from consumir c, servicio s
+        where c.servicio = s.codigo;
+begin
+    for regc1 in c1 loop
+        if regc1.habitacion = auxHab and regc1.fecha = auxFecha then 
+            auxCantidad := auxCantidad + regc1.total;
+        end if;
+    end loop;
+    return auxCantidad;
+end;
+
+
+select gastodiario(2, '12/11/12')from dual;
+
 
         
+
+/*6. Crea una función llamada gastotal, en la que dado un número de reserva, devuelva la 
+cantidad total gastada en servicios por esa reserva.*/
+create or replace function gastotal(auxReserva calendreservas.reserva%type) return number
+is
+    auxGasto number;
+begin
+    select sum(s.precio * c.cantidad) total into auxGasto from consumir c, servicio s, calendreservas r
+    where auxReserva = r.reserva and r.habitacion = c.habitación and r.fecha = c.fecha and c.servicio = s.codigo;
+    return(auxGasto);
+end;
+
+select gastotal(1)from dual;
 
 
 
