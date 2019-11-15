@@ -135,4 +135,63 @@ end;
 select gastotal(1)from dual;
 
 
+/*7. Crea una función que dado un código de tratamiento nos devuelva la cantidad total de clientes que 
+han solicitado alguna cita para dicho tratamiento.
+Nos interesa saber la cantidad de clientes distintos que han recibido el tratamiento, no la cantidad 
+de veces que se ha hecho este tratamiento.
+*/
+create or replace function solTratamiento(auxCod tratamiento.codigo%type) return number
+is 
+    auxTotal number(4, 0) := 0;
+begin
+    select count(distinct cliente) into auxTotal from cita 
+    where tratamiento = auxCod;
+    return auxTotal;
+end;
+    
+select soltratamiento('MAS01')from dual;
+    
+
+/*8. Crea una función que dado un código de reserva realizada por télefono nos devuelva el nombre
+del empleado que realizó dicha reserva.*/
+create or replace function resTelefono1(auxRes reserva.codigo%type) return varchar
+is 
+    auxNombre empleado.nombre%type := '';
+begin
+    select e.nombre into auxNombre from empleado e, restelefono r
+    where r.reserva = auxRes and r.emprecepcion = e.nif;
+    return auxNombre;
+end;
+
+select restelefono1(1)from dual;
+
+
+/* 9. Crea una función en la que se devuelva el nombre del empleado que menos guardias de limpieza tiene.
+En caso de que 2 de ellos empaten a menor número de guardias se devolverá el primero alfabéticamente.*/
+create or replace function menosGuardias return empleado.nombre%type
+is
+    auxNombre empleado.nombre%type;
+    contador number(1) := 0;
+    cursor c1 is 
+        select nombre from empleado, calendario
+        where nif = emplimpieza
+        group by nif, nombre
+        having count(*) <= all (select count(*) from calendario
+                                where emplimpieza is not null
+                                group by emplimpieza)
+        order by nombre;
+begin
+    for g in c1 loop
+        contador := contador + 1;
+        auxNombre := g.nombre;
+        if contador = 1 then exit;
+        end if;
+    end loop;
+    return auxNombre;
+end;
+
+select menosguardias() from dual;
+
+        
+
 
