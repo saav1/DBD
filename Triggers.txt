@@ -1,0 +1,205 @@
+/*1. Se debe controlar que en los precios de cada categoría de habitación en cada temporada se cumpla que 
+psa <= pad <= pmp <= ppc.
+Si no es así se debe evitar la operación que hace que sea incorrecto y se debe mostrar un mensaje indicando lo 
+que está mal. */
+
+create or replace trigger precios_Comida before insert or update on pvptemporada
+for each row 
+begin
+    if(:new.psa > :new.pad or :new.psa > :new.pmp or :new.psa > :new.ppc) then 
+        raise_application_error(-20601, 'Error en psa, no es inferior a alguno de ad, pmp o ppc');
+    end if;
+    if(:new.pad > :new.pmp or :new.pad > :new.ppc)then
+        raise_application_error(-20601, 'Error en pad, no es inferiro a pmp o ppc');
+    end if;
+    if(:new.pmp > :new.ppc) then
+        raise_application_error(-20601, 'Error en pmp, no es inferiro a ppc');
+    end if;    
+end;
+
+
+/*2. Las habitaciones tipo SUITE sólo están en la quinta planta.*/
+create or replace trigger suite_quinta before insert or update 
+on habitacion 
+for each row
+begin
+    if(:new.categoria = 'S' and :new.piso != 5) then 
+        raise_application_error(-20601, 'La habitación suite no está en la quinta planta');
+    end if;
+end;
+
+insert into habitacion values(13, 'S', 32, 5);
+
+
+/*3. Controlar que si una persona realiza una reserva de una 
+habitación individual, no pueda tener cama supletoria.*/
+
+create or replace trigger ind_supletoria before insert or update 
+on calendreservas
+for each row
+declare 
+    auxCat habitacion.categoria%type := '_';
+    
+begin
+    select categoria into auxCat from habitacion
+    where :new.habitacion = habitacion.numero;
+    if(auxCat = 'I' and :new.camasup = 'SI') then
+        RAISE_APPLICATION_ERROR(-20200, 'Reserva de cama individual + camasuperior Error.');
+    end if;
+end;
+
+insert into calendreservas values (13, '31/08/13', 'SI', 8, 'MP');
+
+
+/*4. Cuando un cliente reserva una cita con un empleado de
+servicios para  un tratamiento concreto, se debe controlar si 
+ese empleado realiza el citado tratamiento y, si no es así, 
+se debe evitar que se realice la reserva para ese tratamiento
+indicando "El empleado de nombre X no realiza el tratamiento Y"
+(Donde X e Y serán los valores de nombre del empleado y del 
+tratamiento implicados en la operación).
+*/
+
+create or replace trigger reservacita before insert or update 
+on cita 
+for each row
+declare
+    
+    auxOK boolean := false;
+        
+    cursor c1 is select tratamiento from realizar 
+                 where empleado = :new.empleado;
+    
+begin
+    
+    for regc1 in c1 loop
+        
+        if(regc1.tratamiento = :new.tratamiento) then
+            auxOK := true;
+        end if;
+        
+    end loop;
+    
+    if(auxOK = false)then
+        raise_application_error(-20601, '---ERROR EN TRATAMIENTO***');
+    end if;
+    
+end;
+
+
+insert into cita values('18/12/12', 5, '77777777S', '21446688A', 'PEL02');
+
+/*
+5. Cuando a un día se le vaya a asignar de guardia un empleado de 
+limpieza que ya vaya a estar de guardia otros 5 días del mismo mes 
+se permitirá la operación pero se mostrará un mensaje indicando
+"X está bastante cargado de guardias el mes Y" (x-empleado , y-mes)
+*/
+
+/*
+CON UN SOLO TRIGGER DARÁ PROBLEMAS EN LA EJECUCIÓN DE UPDATE
+COMO PODEMOS ENCONTRAR EN LAS SENTENCIAS DE LA SESIÓN 10
+SE SOLUCIONA CON LA LABOR COMBINADA DE 2 TRIGGERS QUE SE APOYAN 
+EN UNA TABLA AUXILIAR 'auxlimpieza'. ESTA TABLA SE ACUTALIZARÁ A 
+TRAVÉS DE UN DISPARADOR DE SENTENCIAS Y SE UTILIZA SU INFORMACIÓN 
+EN EL DISPARADOR DE FILA.
+*/
+
+create table auxlimpieza(niflimpieza char(9), mes char(7), total number(2));
+
+create or replace trigger limpieza_mes before insert or update on calendario
+begin
+    delete from auxlimpieza;
+    insert into auxlimpieza select emplimpieza, to_char(fecha, 'MM-yyyy'), count(*) from calendario
+    where emplimpieza is not null
+    group by emplimpieza, to_char(fecha, 'MM-yyyy');
+end;
+
+create or replace trigger limpieza after insert or update on calendario
+for each row 
+declare
+    cuantos number(2);
+    auxNombre empleado.nombre%type;
+begin
+    select total into cuantos from auxlimpieza
+    where niflimpieza = :new.emplimpieza and mes = to_char(:new.fecha, 'MM-yyyy');
+    if(cuantos >= 5) then 
+        select nombre into auxnombre from empleado where nif = :new.emlimpieza;
+        raise_application_error( auxnombre ||' ya esta bastante cargado el mes ' || to_char(:new.fecha, 'Month'));
+    end if;
+    exception
+    when no_data_found then null;
+end;
+
+
+
+/*
+1. Se debe controlar para las actividades de niños, adultos y para todos, que cuando una 
+actividad sustituya a otra, no esé sustituyendose a sí misma. Si se diera el caso de intentar
+sustituirse a sí misma, se mostrará un mensaje indicando que no es posible y se abortaría la 
+operación.
+*/
+create or replace trigger sustodos before insert or update on susttodos
+for each row 
+declare 
+same_data exception;
+begin
+    if(:new.activ1 = :new.activ2) then
+        raise_application_error(-20601, 'SAME DATA ERROR***');
+    end if;
+exception
+    when same_data then 
+        dbms_output.put_line('SAME DATA ERROR***');
+end;
+
+
+
+insert into susttodos values('BB01', 'BB01');
+
+
+/*
+2. Se debe controlar cuando demos de alta o modifiquemos la superficie mínima
+de una categoria de habitación, que la superficie mínima sea menor que la máxima, 
+siempre que exista la superficie máxima. En caso contrario, se invertirán los valores
+es decir, se tomará la máxima como mínima y viceversa. 
+*/
+
+create or replace trigger categoriasup before insert or update on categoria
+for each row
+declare
+    auxSup categoria.supmin%type;
+begin
+    if(:new.supmax is not null)then
+        if(:new.supmin > :new.supmax) then
+            auxSup := :new.supmin;
+            :new.supmin := :new.supmax;
+            :new.supmax := auxSup;
+        end if;    
+    end if;
+end;
+
+update categoria set supmin = 21 , supmax = 16 where nombre = 'I';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
