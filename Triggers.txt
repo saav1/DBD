@@ -131,7 +131,7 @@ begin
     when no_data_found then null;
 end;
 
-
+--CREATE TRIGGER 2.
 
 /*
 1. Se debe controlar para las actividades de niños, adultos y para todos, que cuando una 
@@ -181,9 +181,79 @@ end;
 update categoria set supmin = 21 , supmax = 16 where nombre = 'I';
 
 
+/*
+3. Cuando al planificar el horario de actividades, se dé de alta una nueva actividad 
+en un día que tiene ya 4 actividades programadas, se evitará la operación y se mostrará 
+un mensaje indicando que la actividad X se debe realizar otro día, donde en X figurará
+la descripción de la actividad.
+*/
+create or replace trigger activprog before insert or update on horario
+for each row
+declare
+    auxDesc actividad.descripcion%type;
+    auxCont number(2):=0;
+begin
+    select count(distinct actividad) into auxCont from horario where fecha = :new.fecha;
+    
+    if(auxCont >= 4)then
+        select descripcion into auxDesc from actividad where codigo = :new.actividad;
+        raise_application_error(-20601, '***ERROR*** LA HABITACIÓN '||auxDesc||' YA TIENE 4 ACTIVIDADES ESE DIA ');
+    end if;
+end;
 
 
+insert into horario values ('16/08/13', 3, 'BAI');
 
+/*
+4. Al dar de alta una reserva para un cliente comprobar si ese mismo cliente ya tiene
+para ese día otra reserva en el mismo hotel. Si ya tiene habitaciones reservadas, mostrar
+un mensaje con las características de lo que tiene reservado para ese mismo día 
+(números de la habitaciones, con su tipo, alimentación y cama supletoria)
+*/
+
+create or replace trigger altacliente before insert or update on calendreservas 
+for each row
+declare
+    auxCliente reserva.cliente%type;
+    auxReserva reserva.codigo%type;
+    cursor c1 is select * from calendreservas 
+                 where fecha = :new.fecha and reserva = :new.reserva;
+begin
+    
+    select distinct reserva into auxReserva from calendreservas 
+    where reserva = :new.reserva;
+    
+    for regc1 in c1 loop
+        if(regc1.reserva = auxReserva)then
+            dbms_output.put_line('Habitacion '||regc1.habitacion||' alimentacion '||regc1.alimentacion||' camasupletoria '||regc1.camasup);
+        end if;
+    end loop;
+    
+
+end;
+
+insert into calendreservas values(14, '31/08/13', 'NO', 8, 'MP');
+
+--OPCIÓN 2. MUESTRA LA CATEGORIA TAMBIÉN.
+create or replace trigger alta_reserva before insert or update 
+on calendreservas
+for each row
+declare
+    auxCategoria habitacion.categoria%type;
+    auxNif cliente.nif%type;
+    cursor c1 is select * from reserva, calendreservas 
+                 where codigo = reserva and cliente = auxNif and fecha = :new.fecha;
+begin
+    select cliente into auxNif from reserva where codigo = :new.reserva;
+    for regc1 in c1 loop
+        select categoria into auxCategoria from habitacion where numero = :new.habitacion;
+        dbms_output.put_line('Habitacion: '||regc1.habitacion||' categoria: '||auxCategoria||' alimentación:'||regc1.alimentacion||' cama: '||regc1.camasup );
+    end loop;
+end;
+
+insert into calendreservas values(15, '31/08/13', 'NO', 8, 'MP');
+
+insert into habitacion values(15, 'I', null, null);
 
 
 
