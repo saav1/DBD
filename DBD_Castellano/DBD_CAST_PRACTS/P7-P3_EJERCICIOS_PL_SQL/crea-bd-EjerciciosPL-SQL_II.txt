@@ -12,3 +12,19 @@ create table material14(codigo char(5) constraint cpmaterial14 primary key, esta
 
 create table proveedor14(nif char(9) constraint proveedor14 primary key, nombre varchar(40), 
 telefono varchar(14), email varchar(50));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,48 @@
+--Toda la información ... eliminando duplicados y ordenando por nombre.
+
+    select distinct pv.* from usuario u, provincia pv 
+    where u.provincia = codp
+    order by pv.nombre;
+
+    select distinct pv.* from usuario u, provincia pv
+    where u.provincia = codp
+    order by 2;
+
+--Email de los usuarios cuyo código postal no sea x, y , z
+
+    select email from usuarios where codpos not in ('x', 'y', 'z');
+
+--Código del artículo MAS CARO.
+    
+    select cod from articulo where pvp = (select max(pvp) from articulo);
+
+    select cod from articulo where pvp >= all (select pvp from articulo where pvp is not null);
+
+--marcas de las que NO EXISTE ningún televisor
+
+    select marca from marca where marca NOT IN (select marca from articulo a, tv t where a.cod = t.cod);
+
+    select marca from marca m WHERE NOT EXISTS (select 1 from articulo a, tv t where a.cod = t.cod and a.marca = m.marca);
+
+--muestras las cestas DEL AÑO 2010 junto con el nombre del artículo al que hace referencia...
+
+    select c.* from cesta join articulo on (cod = articulo) where to_char(fecha,'yyyy') = '2010';
+
+
+--Cuantos artículos de cada marca hay
+    
+    select marca, count(*) from articulo group by marca;
+
+--usuarios que han realizado más de un pedido.
+
+    select dni from usuario u, pedido p where u.emial = p.usuario GROUP BY dni HAVING count(*) > 1;
+    
+
+
+
+
+
+
+
+
+

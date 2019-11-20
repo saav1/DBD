@@ -1,0 +1,208 @@
+--:::::::::: EJERCICIO 1 ::::::::::::::
+create or replace function ejercicio1 (auxprueba prueba.codigo%type, auxcat deportista.categoria%type) return varchar
+is
+    cursor c1 is select * from deportista 
+    where categoria = auxcat;
+
+    cursor c2 is select * from participar 
+    where prueba = auxprueba;
+    
+    auxres varchar2(30):='NO';
+    auxcont number(2) := 0;
+begin
+    
+    select count(distinct codigo) into auxcont from prueba where codigo = auxprueba;
+    
+    if(auxcont <> 0)then
+        for rc1 in c1 loop
+            for rc2 in c2 loop
+                if(rc1.nif = rc2.deportista)then
+                    auxres := 'SI';
+                end if;
+            end loop;
+        end loop;
+        
+    else 
+        auxres:= 'No existe la prueba!*';
+    end if;
+
+    return auxres;
+end;
+
+select ejercicio1('CAEXT02P9', 'SUB12')from dual;
+
+
+
+--::::::::::: EJERCICIO 2 :::::::::
+create or replace procedure ejercicio2(auxfecha date, auxvalor number)
+is
+    cursor c1 is select nif, fechanac from deportista d, participar p
+    where nif = p.deportista and p.prueba = (select codigo from prueba r
+                                            where r.fecha = auxfecha);
+    auxedad number(2) := 0;
+    auxcont number(2) := 0;
+    mayor exception;                                 
+begin
+  for rc1 in c1 loop
+    auxedad := to_char(auxfecha, 'yyyy') - to_char(rc1.fechanac, 'yyyy');
+    escribir('D: '||rc1.nif||' Edad:'||auxedad);
+
+    if(auxedad >= 40)then
+        raise mayor;
+    end if;
+    if(auxedad < auxvalor)then
+        auxcont := auxcont + 1;
+    end if;
+  end loop;
+  escribir(auxcont);
+  if(auxcont = 0)then 
+    escribir('OK');
+  elsif(auxcont <= 5)then
+    escribir('HAY');
+  elsif(auxcont > 5)then
+    escribir('DEMASIADOS');
+  end if;
+exception 
+    when no_data_found then 
+        escribir('No hay pruebas para esa fecha dada como entrada.');
+    when mayor then 
+        escribir('A revisar');
+end;
+
+
+exec ejercicio2('02/01/16', 20);
+
+
+
+--EJERCICIO 3--
+
+create or replace trigger ejercicio3 after insert or update on campeonato
+for each row 
+declare 
+    cursor c1 is select codigo from prueba 
+                 where campeonato = :new.codigo;
+    auxcont number(2) := 0;
+    auxpresupuesto prueba.presupuesto%type := :new.financiacion - 100;
+
+sinpruebas exception;
+sinreparto exception;
+begin
+    select count(distinct codigo) into auxcont from prueba 
+    where campeonato = :new.codigo;
+    
+    if auxcont = 0 then 
+        raise sinpruebas;
+    elsif :new.financiacion < 100 then
+        raise sinreparto;
+    end if; 
+
+    for rc1 in c1 loop
+        update prueba set presupuesto = auxpresupuesto/auxcont where codigo = rc1.codigo;
+    end loop;
+    
+    update campeonato set financiacion = 100 where codigo= :new.codigo;
+exception
+    when sinreparto then
+        escribir('');
+    when sinpruebas then
+        escribir('***Sin pruebas asignadas***');
+end;
+
+update campeonato set financiacion = 1000 where codigo = 'STALYN20';
+
+--EJERCICIO 4
+
+create or replace procedure listado is
+
+cursor c1 is select c.codigo camp, p.codigo prue from prueba p, campeonato c
+             where p.campeonato = c.codigo;
+ 
+cursor c2 is select distinct d.nif, r.puntos from deportista d, prueba p, participar r, campeonato c
+             where d.nif = r.deportista and r.prueba = p.codigo and 
+             p.campeonato = c.codigo;
+    
+begin
+
+    for rc1 in c1 loop
+        escribir('Campeonato: '||rc1.camp||' prueba:'||rc1.prue);
+    end loop;
+
+    for rc2 in c2 loop
+        escribir(rc2.nif||' puntos:'||rc2.puntos);
+    end loop;
+end;
+
+exec listado();
+
+
+--EJERCICIO 4 
+create or replace procedure ejercicio4 is
+    
+cursor c1 is select p.campeonato camp, p.codigo prue from prueba p, campeonato c
+             where p.campeonato = c.codigo;
+
+cursor c2 is select r.deportista dep, r.prueba prue, r.puntos puntos from participar r
+             order by r.prueba asc, r.puntos desc;
+             --fetch next 5 rows only;
+
+auxpart number(2);
+auxcont number(2);
+menos5 exception;
+
+begin
+
+    for rc1 in c1 loop
+        escribir('CAMPEONATO: '||rc1.camp||' PRUEBA:'||rc1.prue);
+        auxpart := 0;
+        auxcont := 0;
+        for rc2 in c2 loop
+            if(rc1.prue = rc2.prue)then
+                auxpart := auxpart + 1;    
+                --escribir(auxcont||'. '||rc2.dep||' ('||rc2.puntos||') ');
+            end if;
+        end loop;
+        
+        if (auxpart > 4) then 
+            for rc2 in c2 loop
+                if(rc1.prue = rc2.prue and auxcont < 5)then
+                    auxcont := auxcont + 1;    
+                    escribir(auxcont||'. '||rc2.dep||' ('||rc2.puntos||') ');
+                end if;
+            end loop;
+        
+        end if;
+        
+        if(auxpart < 5) then
+            escribir('***Prueba desierta***');
+        end if;
+    end loop;    
+end;
+
+
+exec ejercicio4();
+
+
+--EJERCICIO 5
+create or replace trigger ejercicio5 before insert or update on deportista
+for each row
+begin 
+    if(:new.categoria <> 'SUB12' AND :new.categoria <> 'SUB16' and :new.categoria <> 'ABSOLUTA')then
+        raise_application_error(-20601, '**ERROR EN CATEGORIA**');
+    end if;
+    if(:old.categoria = 'SUB12' and :new.categoria <> 'SUB16') then 
+        raise_application_error(-20601, '** SUB12 >> SUB16 **');
+    end if;
+    
+    if(:old.categoria = 'SUB16' and :new.categoria <> 'SUB18') then 
+        raise_application_error(-20601, '** SUB16 >> SUB18 **');
+    end if;
+    if(:old.categoria = 'SUB18' and :new.categoria <> 'ABSOLUTA') then 
+        raise_application_error(-20601, '** SUB12 >> SUB16 **');
+    end if;
+end;
+
+update deportista set categoria = 'SUB12' where nif = '11111111A';
+
+
+
+
